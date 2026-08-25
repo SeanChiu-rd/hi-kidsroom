@@ -10,9 +10,9 @@ export default function BookingPage() {
 
   const [selected, setSelected] = useState(null)
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
-  const [note, setNote] = useState('')
+  const [partySize, setPartySize] = useState(1)
+  const [age, setAge] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [done, setDone] = useState(false)
@@ -45,6 +45,7 @@ export default function BookingPage() {
       month: 'long',
       day: 'numeric',
       weekday: 'long',
+      timeZone: 'Asia/Taipei',
     })
     if (!groups[key]) groups[key] = []
     groups[key].push(slot)
@@ -54,12 +55,24 @@ export default function BookingPage() {
     return new Date(iso).toLocaleTimeString('zh-TW', {
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'Asia/Taipei',
     })
+  }
+
+  function remainingOf(slot) {
+    return slot.capacity - slot.booked_count
   }
 
   async function submitBooking(e) {
     e.preventDefault()
     if (!selected) return
+
+    const remaining = remainingOf(selected)
+    if (Number(partySize) > remaining) {
+      setMessage(`人數超過剩餘名額（尚剩 ${remaining} 位）`)
+      return
+    }
+
     setBusy(true)
     setMessage('')
 
@@ -67,14 +80,15 @@ export default function BookingPage() {
       slot_id: selected.id,
       teacher_id: teacherId,
       customer_name: name,
-      customer_email: email,
       customer_phone: phone,
-      note,
+      party_size: Number(partySize),
+      customer_age: age,
     })
 
     if (error) {
       setMessage('預約失敗：' + error.message)
       setBusy(false)
+      loadData() // 重新整理名額（可能剛好被別人約走）
     } else {
       setDone(true)
     }
@@ -99,8 +113,11 @@ export default function BookingPage() {
                 weekday: 'long',
                 hour: '2-digit',
                 minute: '2-digit',
+                timeZone: 'Asia/Taipei',
               })}
             </strong>
+            <br />
+            {partySize} 位
           </p>
           <p className="muted">老師會收到通知並與你聯繫。</p>
           <Link to="/" className="back-link">← 回首頁</Link>
@@ -123,20 +140,24 @@ export default function BookingPage() {
           <div key={day} className="day-group">
             <div className="day-label">{day}</div>
             <div className="slot-chips">
-              {daySlots.map((slot) => (
-                <button
-                  key={slot.id}
-                  type="button"
-                  disabled={slot.is_booked}
-                  className={`slot-chip ${slot.is_booked ? 'booked' : ''} ${
-                    selected?.id === slot.id ? 'selected' : ''
-                  }`}
-                  onClick={() => setSelected(slot)}
-                >
-                  {timeLabel(slot.start_time)}－{timeLabel(slot.end_time)}
-                  {slot.is_booked && ' · 已約'}
-                </button>
-              ))}
+              {daySlots.map((slot) => {
+                const remaining = remainingOf(slot)
+                const full = remaining <= 0
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    disabled={full}
+                    className={`slot-chip ${full ? 'booked' : ''} ${
+                      selected?.id === slot.id ? 'selected' : ''
+                    }`}
+                    onClick={() => setSelected(slot)}
+                  >
+                    {timeLabel(slot.start_time)}－{timeLabel(slot.end_time)}
+                    {full ? ' · 已約滿' : ` · 剩 ${remaining} 位`}
+                  </button>
+                )
+              })}
             </div>
           </div>
         ))
@@ -154,23 +175,36 @@ export default function BookingPage() {
                 weekday: 'long',
                 hour: '2-digit',
                 minute: '2-digit',
+                timeZone: 'Asia/Taipei',
               })}
+              （尚剩 {remainingOf(selected)} 位）
             </p>
             <label>
               姓名
               <input value={name} onChange={(e) => setName(e.target.value)} required />
             </label>
             <label>
-              Email
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </label>
-            <label>
               電話
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} required />
             </label>
             <label>
-              備註（想上的內容、孩子年齡等）
-              <textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
+              人數
+              <input
+                type="number"
+                min={1}
+                max={remainingOf(selected)}
+                value={partySize}
+                onChange={(e) => setPartySize(e.target.value)}
+                required
+              />
+            </label>
+            <label>
+              年齡
+              <input
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                placeholder="例如 5歲、3-5歲"
+              />
             </label>
             <button type="submit" disabled={busy}>
               {busy ? '送出中…' : '確認預約'}

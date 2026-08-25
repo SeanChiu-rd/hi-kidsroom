@@ -8,7 +8,14 @@ export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true)
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
+  const [capacity, setCapacity] = useState(1)
   const [message, setMessage] = useState('')
+
+  // 修改中的時段
+  const [editingId, setEditingId] = useState(null)
+  const [editStart, setEditStart] = useState('')
+  const [editEnd, setEditEnd] = useState('')
+  const [editCapacity, setEditCapacity] = useState(1)
 
   async function loadSlots() {
     setLoading(true)
@@ -35,17 +42,23 @@ export default function TeacherDashboard() {
       setMessage('結束時間必須晚於開始時間')
       return
     }
+    if (Number(capacity) < 1) {
+      setMessage('人數上限至少為 1')
+      return
+    }
 
     const { error } = await supabase.from('slots').insert({
       teacher_id: user.id,
       start_time: new Date(start).toISOString(),
       end_time: new Date(end).toISOString(),
+      capacity: Number(capacity),
     })
     if (error) {
       setMessage('新增失敗：' + error.message)
     } else {
       setStart('')
       setEnd('')
+      setCapacity(1)
       loadSlots()
     }
   }
@@ -56,6 +69,56 @@ export default function TeacherDashboard() {
     else loadSlots()
   }
 
+  function startEdit(slot) {
+    setMessage('')
+    setEditingId(slot.id)
+    setEditStart(toLocalInput(slot.start_time))
+    setEditEnd(toLocalInput(slot.end_time))
+    setEditCapacity(slot.capacity)
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+  }
+
+  async function saveEdit(slot) {
+    setMessage('')
+
+    if (new Date(editEnd) <= new Date(editStart)) {
+      setMessage('結束時間必須晚於開始時間')
+      return
+    }
+    if (Number(editCapacity) < slot.booked_count) {
+      setMessage(`人數上限不能小於已預約人數（目前已預約 ${slot.booked_count} 人）`)
+      return
+    }
+
+    const { error } = await supabase
+      .from('slots')
+      .update({
+        start_time: new Date(editStart).toISOString(),
+        end_time: new Date(editEnd).toISOString(),
+        capacity: Number(editCapacity),
+      })
+      .eq('id', slot.id)
+
+    if (error) {
+      setMessage('修改失敗：' + error.message)
+    } else {
+      setEditingId(null)
+      loadSlots()
+    }
+  }
+
+  // ISO 時間轉成 <input type="datetime-local"> 需要的本地格式
+  function toLocalInput(iso) {
+    const d = new Date(iso)
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+      d.getHours()
+    )}:${pad(d.getMinutes())}`
+  }
+
   function formatDT(iso) {
     return new Date(iso).toLocaleString('zh-TW', {
       month: 'numeric',
@@ -63,6 +126,7 @@ export default function TeacherDashboard() {
       hour: '2-digit',
       minute: '2-digit',
       weekday: 'short',
+      timeZone: 'Asia/Taipei',
     })
   }
 
@@ -95,6 +159,16 @@ export default function TeacherDashboard() {
             required
           />
         </label>
+        <label>
+          人數上限
+          <input
+            type="number"
+            min={1}
+            value={capacity}
+            onChange={(e) => setCapacity(e.target.value)}
+            required
+          />
+        </label>
         <button type="submit">新增可預約時段</button>
       </form>
 
@@ -107,20 +181,71 @@ export default function TeacherDashboard() {
         <p className="muted">還沒有登記任何時段，用上面的表單新增吧。</p>
       ) : (
         <ul className="slot-list">
-          {slots.map((slot) => (
-            <li key={slot.id} className="slot-item">
-              <span>
-                {formatDT(slot.start_time)} － {formatDT(slot.end_time)}
-              </span>
-              {slot.is_booked ? (
-                <span className="badge booked">已被預約</span>
-              ) : (
-                <button className="danger" onClick={() => deleteSlot(slot.id)}>
-                  刪除
-                </button>
-              )}
-            </li>
-          ))}
+          {slots.map((slot) => {
+            const full = slot.booked_count >= slot.capacity
+
+            if (editingId === slot.id) {
+              return (
+                <li key={slot.id} className="slot-item editing">
+                  <div className="slot-edit">
+                    <label>
+                      開始時間
+                      <input
+                        type="datetime-local"
+                        value={editStart}
+                        onChange={(e) => setEditStart(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      結束時間
+                      <input
+                        type="datetime-local"
+                        value={editEnd}
+                        onChange={(e) => setEditEnd(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      人數上限
+                      <input
+                        type="number"
+                        min={1}
+                        value={editCapacity}
+                        onChange={(e) => setEditCapacity(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <div className="slot-actions">
+                    <button className="sm" onClick={() => saveEdit(slot)}>
+                      儲存
+                    </button>
+                    <button className="secondary sm" onClick={cancelEdit}>
+                      取消
+                    </button>
+                  </div>
+                </li>
+              )
+            }
+
+            return (
+              <li key={slot.id} className="slot-item">
+                <span>
+                  {formatDT(slot.start_time)} － {formatDT(slot.end_time)}
+                  <span className="muted"> · 已預約 {slot.booked_count}/{slot.capacity} 人</span>
+                </span>
+                <span className="slot-actions">
+                  {full && <span className="badge booked">已約滿</span>}
+                  <button className="secondary sm" onClick={() => startEdit(slot)}>
+                    修改
+                  </button>
+                  {slot.booked_count === 0 && (
+                    <button className="danger" onClick={() => deleteSlot(slot.id)}>
+                      刪除
+                    </button>
+                  )}
+                </span>
+              </li>
+            )
+          })}
         </ul>
       )}
     </div>

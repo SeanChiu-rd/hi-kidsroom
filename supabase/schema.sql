@@ -18,7 +18,8 @@ create table if not exists slots (
   teacher_id uuid not null references profiles(id) on delete cascade,
   start_time timestamptz not null,
   end_time timestamptz not null,
-  is_booked boolean not null default false,
+  capacity int not null default 1,      -- 此時段可容納的總人數上限
+  booked_count int not null default 0,  -- 目前已預約的總人數
   created_at timestamptz default now()
 );
 
@@ -28,8 +29,10 @@ create table if not exists bookings (
   slot_id uuid not null references slots(id) on delete cascade,
   teacher_id uuid not null references profiles(id) on delete cascade,
   customer_name text not null,
-  customer_email text not null,
   customer_phone text,
+  party_size int not null default 1,   -- 這筆預約的人數
+  customer_age text,                   -- 年齡（可填「5歲」「3-5歲」等）
+  customer_email text,
   note text,
   status text not null default 'confirmed',
   created_at timestamptz default now()
@@ -57,11 +60,20 @@ create trigger on_auth_user_created
 -- ============================================================
 create or replace function handle_new_booking()
 returns trigger as $$
+declare
+  cap int;
+  booked int;
 begin
-  if exists (select 1 from slots where id = new.slot_id and is_booked = true) then
-    raise exception '此時段已被預約';
+  -- 鎖住該時段這一列，避免多人同時預約造成超額
+  select capacity, booked_count into cap, booked
+  from slots where id = new.slot_id for update;
+
+  if booked + new.party_size > cap then
+    raise exception '此時段名額不足，已約滿';
   end if;
-  update slots set is_booked = true where id = new.slot_id;
+
+  update slots set booked_count = booked_count + new.party_size
+  where id = new.slot_id;
   return new;
 end;
 $$ language plpgsql security definer;
