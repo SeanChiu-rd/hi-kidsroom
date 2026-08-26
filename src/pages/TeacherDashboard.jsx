@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 
@@ -6,6 +7,7 @@ export default function TeacherDashboard() {
   const { user } = useAuth()
   const [slots, setSlots] = useState([])
   const [loading, setLoading] = useState(true)
+  const [activityName, setActivityName] = useState('')
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
   const [capacity, setCapacity] = useState(1)
@@ -13,6 +15,7 @@ export default function TeacherDashboard() {
 
   // 修改中的時段
   const [editingId, setEditingId] = useState(null)
+  const [editActivity, setEditActivity] = useState('')
   const [editStart, setEditStart] = useState('')
   const [editEnd, setEditEnd] = useState('')
   const [editCapacity, setEditCapacity] = useState(1)
@@ -46,9 +49,14 @@ export default function TeacherDashboard() {
       setMessage('人數上限至少為 1')
       return
     }
+    if (!activityName.trim()) {
+      setMessage('請輸入活動名稱')
+      return
+    }
 
     const { error } = await supabase.from('slots').insert({
       teacher_id: user.id,
+      activity_name: activityName.trim(),
       start_time: new Date(start).toISOString(),
       end_time: new Date(end).toISOString(),
       capacity: Number(capacity),
@@ -56,6 +64,7 @@ export default function TeacherDashboard() {
     if (error) {
       setMessage('新增失敗：' + error.message)
     } else {
+      setActivityName('')
       setStart('')
       setEnd('')
       setCapacity(1)
@@ -72,6 +81,7 @@ export default function TeacherDashboard() {
   function startEdit(slot) {
     setMessage('')
     setEditingId(slot.id)
+    setEditActivity(slot.activity_name || '')
     setEditStart(toLocalInput(slot.start_time))
     setEditEnd(toLocalInput(slot.end_time))
     setEditCapacity(slot.capacity)
@@ -93,9 +103,15 @@ export default function TeacherDashboard() {
       return
     }
 
+    if (!editActivity.trim()) {
+      setMessage('請輸入活動名稱')
+      return
+    }
+
     const { error } = await supabase
       .from('slots')
       .update({
+        activity_name: editActivity.trim(),
         start_time: new Date(editStart).toISOString(),
         end_time: new Date(editEnd).toISOString(),
         capacity: Number(editCapacity),
@@ -134,13 +150,28 @@ export default function TeacherDashboard() {
     <div className="page">
       <div className="page-head">
         <h1>老師專區</h1>
-        <button className="secondary" onClick={() => supabase.auth.signOut()}>
-          登出
-        </button>
+        <div className="slot-actions">
+          <Link to="/" className="button-link">
+            首頁
+          </Link>
+          <button className="secondary" onClick={() => supabase.auth.signOut()}>
+            登出
+          </button>
+        </div>
       </div>
       <p className="muted">目前登入：{user.email}</p>
 
       <form onSubmit={addSlot} className="card form row">
+        <label>
+          活動名稱
+          <input
+            type="text"
+            value={activityName}
+            onChange={(e) => setActivityName(e.target.value)}
+            placeholder="例如 黏土手作課"
+            required
+          />
+        </label>
         <label>
           開始時間
           <input
@@ -189,6 +220,14 @@ export default function TeacherDashboard() {
                 <li key={slot.id} className="slot-item editing">
                   <div className="slot-edit">
                     <label>
+                      活動名稱
+                      <input
+                        type="text"
+                        value={editActivity}
+                        onChange={(e) => setEditActivity(e.target.value)}
+                      />
+                    </label>
+                    <label>
                       開始時間
                       <input
                         type="datetime-local"
@@ -229,8 +268,11 @@ export default function TeacherDashboard() {
             return (
               <li key={slot.id} className="slot-item">
                 <span>
+                  {slot.activity_name && (
+                    <strong className="slot-activity">{slot.activity_name}</strong>
+                  )}
                   {formatDT(slot.start_time)} － {formatDT(slot.end_time)}
-                  <span className="muted"> · 已預約 {slot.booked_count}/{slot.capacity} 人</span>
+                  <span className="muted"> · 已預約 {slot.booked_count}/{slot.capacity} 位小孩</span>
                 </span>
                 <span className="slot-actions">
                   {full && <span className="badge booked">已約滿</span>}

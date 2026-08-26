@@ -242,6 +242,21 @@ button.danger {
 button.danger:hover {
   background: #fef2f2;
 }
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 10px;
+  border: 1px solid #d8d8e3;
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  background: #fff;
+  color: var(--ink);
+}
+.button-link:hover {
+  background: #f3f2fb;
+  text-decoration: none;
+}
 button.linklike {
   background: none;
   border: none;
@@ -336,6 +351,22 @@ button.sm {
 }
 
 /* ---------- 時段（客人端可點選） ---------- */
+.activity-group {
+  margin-bottom: 2rem;
+}
+.activity-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin: 0 0 0.9rem;
+  padding-left: 0.6rem;
+  border-left: 4px solid var(--brand);
+  color: var(--ink);
+}
+.slot-activity {
+  display: inline-block;
+  margin-right: 0.5rem;
+  color: var(--brand);
+}
 .day-group {
   margin-bottom: 1.5rem;
 }

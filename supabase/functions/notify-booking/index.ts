@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
         .single(),
       supabase
         .from('slots')
-        .select('start_time, end_time')
+        .select('start_time, end_time, activity_name')
         .eq('id', booking.slot_id)
         .single(),
     ])
@@ -60,16 +60,21 @@ Deno.serve(async (req) => {
       ? `${formatTaipei(slot.start_time)} － ${formatTaipei(slot.end_time)}`
       : '（時段資訊查詢失敗）'
 
+    const activityText = slot?.activity_name || '課程'
+
     const html = `
       <div style="font-family: system-ui, sans-serif; line-height: 1.6; color: #1f2430;">
         <h2 style="color: #6d5efc;">🎉 你有一筆新預約</h2>
         <p>Hi ${teacher.full_name || '老師'}，有客人預約了你的課程：</p>
         <table style="border-collapse: collapse; margin: 12px 0;">
+          <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">活動</td><td><strong>${activityText}</strong></td></tr>
           <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">時段</td><td><strong>${timeText}</strong></td></tr>
           <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">姓名</td><td>${booking.customer_name || ''}</td></tr>
           <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">電話</td><td>${booking.customer_phone || ''}</td></tr>
-          <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">人數</td><td>${booking.party_size || 1} 位</td></tr>
-          <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">年齡</td><td>${booking.customer_age || '未填'}</td></tr>
+          <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">入店大人</td><td>${booking.adults_count ?? 0} 位</td></tr>
+          <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">參加小孩</td><td>${booking.kids_count ?? 1} 位</td></tr>
+          <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">小孩年齡</td><td>${booking.customer_age || '未填'}</td></tr>
+          <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">備註</td><td>${booking.note || '無'}</td></tr>
         </table>
         <p style="color: #6b7280; font-size: 14px;">請儘快與客戶聯繫確認。</p>
       </div>
@@ -84,7 +89,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: Deno.env.get('FROM_EMAIL') || 'onboarding@resend.dev',
         to: teacher.email,
-        subject: `【新預約】${booking.customer_name || '客人'} · ${timeText}`,
+        subject: `【新預約】${activityText} · ${booking.customer_name || '客人'} · ${timeText}`,
         html,
       }),
     })

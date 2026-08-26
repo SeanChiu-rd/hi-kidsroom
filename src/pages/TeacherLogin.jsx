@@ -9,6 +9,7 @@ export default function TeacherLogin() {
 
   const [mode, setMode] = useState('login') // 'login' 或 'signup'
   const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
@@ -29,7 +30,7 @@ export default function TeacherLogin() {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName } },
+        options: { data: { full_name: fullName, phone } },
       })
       if (error) {
         setMessage('註冊失敗：' + error.message)
@@ -54,15 +55,26 @@ export default function TeacherLogin() {
 
       <form onSubmit={handleSubmit} className="card form">
         {mode === 'signup' && (
-          <label>
-            姓名
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-            />
-          </label>
+          <>
+            <label>
+              姓名
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+              />
+            </label>
+            <label>
+              電話
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+              />
+            </label>
+          </>
         )}
 
         <label>

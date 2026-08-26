@@ -11,8 +11,10 @@ export default function BookingPage() {
   const [selected, setSelected] = useState(null)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
-  const [partySize, setPartySize] = useState(1)
+  const [adults, setAdults] = useState(1)
+  const [kids, setKids] = useState(1)
   const [age, setAge] = useState('')
+  const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [done, setDone] = useState(false)
@@ -38,17 +40,19 @@ export default function BookingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teacherId])
 
-  // 依日期把時段分組
-  const groups = {}
+  // 依「活動名稱 → 日期」把時段分組
+  const activities = {}
   for (const slot of slots) {
-    const key = new Date(slot.start_time).toLocaleDateString('zh-TW', {
+    const act = slot.activity_name || '課程'
+    const day = new Date(slot.start_time).toLocaleDateString('zh-TW', {
       month: 'long',
       day: 'numeric',
       weekday: 'long',
       timeZone: 'Asia/Taipei',
     })
-    if (!groups[key]) groups[key] = []
-    groups[key].push(slot)
+    if (!activities[act]) activities[act] = {}
+    if (!activities[act][day]) activities[act][day] = []
+    activities[act][day].push(slot)
   }
 
   function timeLabel(iso) {
@@ -68,8 +72,8 @@ export default function BookingPage() {
     if (!selected) return
 
     const remaining = remainingOf(selected)
-    if (Number(partySize) > remaining) {
-      setMessage(`人數超過剩餘名額（尚剩 ${remaining} 位）`)
+    if (Number(kids) > remaining) {
+      setMessage(`小孩人數超過剩餘名額（尚剩 ${remaining} 位）`)
       return
     }
 
@@ -81,8 +85,10 @@ export default function BookingPage() {
       teacher_id: teacherId,
       customer_name: name,
       customer_phone: phone,
-      party_size: Number(partySize),
+      adults_count: Number(adults),
+      kids_count: Number(kids),
       customer_age: age,
+      note: note,
     })
 
     if (error) {
@@ -117,7 +123,8 @@ export default function BookingPage() {
               })}
             </strong>
             <br />
-            {partySize} 位
+            {selected.activity_name ? selected.activity_name + '／' : ''}
+            大人 {adults} 位、小孩 {kids} 位
           </p>
           <p className="muted">老師會收到通知並與你聯繫。</p>
           <Link to="/" className="back-link">← 回首頁</Link>
@@ -136,29 +143,34 @@ export default function BookingPage() {
       {slots.length === 0 ? (
         <p className="muted">這位老師目前沒有可預約的時段，請稍後再來。</p>
       ) : (
-        Object.entries(groups).map(([day, daySlots]) => (
-          <div key={day} className="day-group">
-            <div className="day-label">{day}</div>
-            <div className="slot-chips">
-              {daySlots.map((slot) => {
-                const remaining = remainingOf(slot)
-                const full = remaining <= 0
-                return (
-                  <button
-                    key={slot.id}
-                    type="button"
-                    disabled={full}
-                    className={`slot-chip ${full ? 'booked' : ''} ${
-                      selected?.id === slot.id ? 'selected' : ''
-                    }`}
-                    onClick={() => setSelected(slot)}
-                  >
-                    {timeLabel(slot.start_time)}－{timeLabel(slot.end_time)}
-                    {full ? ' · 已約滿' : ` · 剩 ${remaining} 位`}
-                  </button>
-                )
-              })}
-            </div>
+        Object.entries(activities).map(([act, days]) => (
+          <div key={act} className="activity-group">
+            <h3 className="activity-title">{act}</h3>
+            {Object.entries(days).map(([day, daySlots]) => (
+              <div key={day} className="day-group">
+                <div className="day-label">{day}</div>
+                <div className="slot-chips">
+                  {daySlots.map((slot) => {
+                    const remaining = remainingOf(slot)
+                    const full = remaining <= 0
+                    return (
+                      <button
+                        key={slot.id}
+                        type="button"
+                        disabled={full}
+                        className={`slot-chip ${full ? 'booked' : ''} ${
+                          selected?.id === slot.id ? 'selected' : ''
+                        }`}
+                        onClick={() => setSelected(slot)}
+                      >
+                        {timeLabel(slot.start_time)}－{timeLabel(slot.end_time)}
+                        {full ? ' · 已約滿' : ` · 剩 ${remaining} 位`}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         ))
       )}
@@ -169,6 +181,7 @@ export default function BookingPage() {
           <form onSubmit={submitBooking} className="card form">
             <p className="muted">
               已選時段：
+              {selected.activity_name ? selected.activity_name + '／' : ''}
               {new Date(selected.start_time).toLocaleString('zh-TW', {
                 month: 'long',
                 day: 'numeric',
@@ -177,7 +190,7 @@ export default function BookingPage() {
                 minute: '2-digit',
                 timeZone: 'Asia/Taipei',
               })}
-              （尚剩 {remainingOf(selected)} 位）
+              （尚剩 {remainingOf(selected)} 位小孩名額）
             </p>
             <label>
               姓名
@@ -188,22 +201,40 @@ export default function BookingPage() {
               <input value={phone} onChange={(e) => setPhone(e.target.value)} required />
             </label>
             <label>
-              人數
+              入店大人人數
               <input
                 type="number"
                 min={1}
-                max={remainingOf(selected)}
-                value={partySize}
-                onChange={(e) => setPartySize(e.target.value)}
+                value={adults}
+                onChange={(e) => setAdults(e.target.value)}
                 required
               />
             </label>
             <label>
-              年齡
+              參加課程小孩人數
+              <select value={kids} onChange={(e) => setKids(e.target.value)} required>
+                {[1, 2, 3, 4].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              小孩年齡
               <input
                 value={age}
                 onChange={(e) => setAge(e.target.value)}
                 placeholder="例如 5歲、3-5歲"
+              />
+            </label>
+            <label>
+              備註
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+                placeholder="有任何需求可在此說明（可留空）"
               />
             </label>
             <button type="submit" disabled={busy}>

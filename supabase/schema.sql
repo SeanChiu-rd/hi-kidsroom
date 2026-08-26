@@ -8,6 +8,7 @@ create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text,
   email text,
+  phone text,
   bio text,
   created_at timestamptz default now()
 );
@@ -16,10 +17,11 @@ create table if not exists profiles (
 create table if not exists slots (
   id uuid primary key default gen_random_uuid(),
   teacher_id uuid not null references profiles(id) on delete cascade,
+  activity_name text,                   -- 活動名稱（同一活動下可有多個時段）
   start_time timestamptz not null,
   end_time timestamptz not null,
-  capacity int not null default 1,      -- 此時段可容納的總人數上限
-  booked_count int not null default 0,  -- 目前已預約的總人數
+  capacity int not null default 1,      -- 此時段可容納的小孩人數上限
+  booked_count int not null default 0,  -- 目前已預約的小孩人數
   created_at timestamptz default now()
 );
 
@@ -30,10 +32,12 @@ create table if not exists bookings (
   teacher_id uuid not null references profiles(id) on delete cascade,
   customer_name text not null,
   customer_phone text,
-  party_size int not null default 1,   -- 這筆預約的人數
+  adults_count int not null default 0, -- 入店大人人數
+  kids_count int not null default 1,   -- 參加課程小孩人數（計入名額）
+  party_size int not null default 1,   -- 舊欄位（保留相容）
   customer_age text,                   -- 年齡（可填「5歲」「3-5歲」等）
   customer_email text,
-  note text,
+  note text,                           -- 備註
   status text not null default 'confirmed',
   created_at timestamptz default now()
 );
@@ -44,8 +48,13 @@ create table if not exists bookings (
 create or replace function handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, email, full_name)
-  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'full_name', ''));
+  insert into public.profiles (id, email, full_name, phone)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'full_name', ''),
+    coalesce(new.raw_user_meta_data->>'phone', '')
+  );
   return new;
 end;
 $$ language plpgsql security definer;
@@ -68,11 +77,11 @@ begin
   select capacity, booked_count into cap, booked
   from slots where id = new.slot_id for update;
 
-  if booked + new.party_size > cap then
+  if booked + new.kids_count > cap then
     raise exception '此時段名額不足，已約滿';
   end if;
 
-  update slots set booked_count = booked_count + new.party_size
+  update slots set booked_count = booked_count + new.kids_count
   where id = new.slot_id;
   return new;
 end;
