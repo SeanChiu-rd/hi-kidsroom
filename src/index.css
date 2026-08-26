@@ -178,6 +178,16 @@ h2 {
   flex-wrap: wrap;
   align-items: flex-end;
 }
+/* 開始 / 結束時間並排成一組，不被其他欄位擠開 */
+.time-pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+.time-pair label {
+  gap: 0.35rem;
+}
 .form label {
   display: flex;
   flex-direction: column;

@@ -195,24 +195,26 @@ export default function TeacherDashboard() {
             required
           />
         </label>
-        <label>
-          開始時間
-          <input
-            type="datetime-local"
-            value={start}
-            onChange={handleStartChange}
-            required
-          />
-        </label>
-        <label>
-          結束時間
-          <input
-            type="datetime-local"
-            value={end}
-            onChange={(e) => setEnd(e.target.value)}
-            required
-          />
-        </label>
+        <div className="time-pair">
+          <label>
+            開始時間
+            <input
+              type="datetime-local"
+              value={start}
+              onChange={handleStartChange}
+              required
+            />
+          </label>
+          <label>
+            結束時間
+            <input
+              type="datetime-local"
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+              required
+            />
+          </label>
+        </div>
         <label>
           人數上限
           <input
@@ -250,22 +252,24 @@ export default function TeacherDashboard() {
                         onChange={(e) => setEditActivity(e.target.value)}
                       />
                     </label>
-                    <label>
-                      開始時間
-                      <input
-                        type="datetime-local"
-                        value={editStart}
-                        onChange={handleEditStartChange}
-                      />
-                    </label>
-                    <label>
-                      結束時間
-                      <input
-                        type="datetime-local"
-                        value={editEnd}
-                        onChange={(e) => setEditEnd(e.target.value)}
-                      />
-                    </label>
+                    <div className="time-pair">
+                      <label>
+                        開始時間
+                        <input
+                          type="datetime-local"
+                          value={editStart}
+                          onChange={handleEditStartChange}
+                        />
+                      </label>
+                      <label>
+                        結束時間
+                        <input
+                          type="datetime-local"
+                          value={editEnd}
+                          onChange={(e) => setEditEnd(e.target.value)}
+                        />
+                      </label>
+                    </div>
                     <label>
                       人數上限
                       <input
