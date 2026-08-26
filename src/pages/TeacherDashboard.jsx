@@ -37,6 +37,18 @@ export default function TeacherDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // 選了開始時間後，自動把結束時間的「年月日」帶成一樣（時間部分沿用既有或開始時間）
+  function handleStartChange(e) {
+    const value = e.target.value
+    setStart(value)
+    if (!value) return
+    const [datePart, timePart] = value.split('T')
+    setEnd((prev) => {
+      const prevTime = prev ? prev.split('T')[1] : ''
+      return `${datePart}T${prevTime || timePart}`
+    })
+  }
+
   async function addSlot(e) {
     e.preventDefault()
     setMessage('')
@@ -89,6 +101,17 @@ export default function TeacherDashboard() {
 
   function cancelEdit() {
     setEditingId(null)
+  }
+
+  function handleEditStartChange(e) {
+    const value = e.target.value
+    setEditStart(value)
+    if (!value) return
+    const [datePart] = value.split('T')
+    setEditEnd((prev) => {
+      const prevTime = prev ? prev.split('T')[1] : value.split('T')[1]
+      return `${datePart}T${prevTime}`
+    })
   }
 
   async function saveEdit(slot) {
@@ -177,7 +200,7 @@ export default function TeacherDashboard() {
           <input
             type="datetime-local"
             value={start}
-            onChange={(e) => setStart(e.target.value)}
+            onChange={handleStartChange}
             required
           />
         </label>
@@ -232,7 +255,7 @@ export default function TeacherDashboard() {
                       <input
                         type="datetime-local"
                         value={editStart}
-                        onChange={(e) => setEditStart(e.target.value)}
+                        onChange={handleEditStartChange}
                       />
                     </label>
                     <label>
