@@ -420,6 +420,28 @@ button.sm {
   border-color: #e2e2ea;
 }
 
+/* ---------- 活動管理 ---------- */
+.checkbox-row {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem !important;
+}
+.checkbox-row input {
+  width: auto;
+}
+.activity-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+.activity-thumb {
+  width: 72px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
 /* ---------- 客人端返回連結 ---------- */
 .back-link {
   display: inline-block;

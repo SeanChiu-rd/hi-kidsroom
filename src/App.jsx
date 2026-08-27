@@ -4,6 +4,7 @@ import Home from './pages/Home'
 import BookingPage from './pages/BookingPage'
 import TeacherLogin from './pages/TeacherLogin'
 import TeacherDashboard from './pages/TeacherDashboard'
+import AdminActivities from './pages/AdminActivities'
 
 // 只有登入的老師才能進入的頁面，未登入就導回登入頁
 function RequireAuth({ children }) {
@@ -13,12 +14,23 @@ function RequireAuth({ children }) {
   return children
 }
 
+// 只有管理人可進入的頁面
+function RequireAdmin({ children }) {
+  const { user, loading, isAdmin } = useAuth()
+  if (loading) return <p className="page">載入中…</p>
+  if (!user) return <Navigate to="/teacher/login" replace />
+  if (!isAdmin) return <Navigate to="/" replace />
+  return children
+}
+
 function App() {
+  const { isAdmin } = useAuth()
   return (
     <>
       <header className="topbar">
         <Link to="/" className="brand">hi-kidsroom</Link>
         <nav>
+          {isAdmin && <Link to="/admin">活動管理</Link>}
           <Link to="/teacher">老師專區</Link>
         </nav>
       </header>
@@ -34,6 +46,14 @@ function App() {
               <RequireAuth>
                 <TeacherDashboard />
               </RequireAuth>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <RequireAdmin>
+                <AdminActivities />
+              </RequireAdmin>
             }
           />
         </Routes>

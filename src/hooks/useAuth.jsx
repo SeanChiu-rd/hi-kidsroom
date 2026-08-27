@@ -5,6 +5,7 @@ const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
+  const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -20,7 +21,21 @@ export function AuthProvider({ children }) {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  const value = { user, loading }
+  // 使用者登入後，讀取個人資料（含是否為管理人）
+  useEffect(() => {
+    if (!user) {
+      setProfile(null)
+      return
+    }
+    supabase
+      .from('profiles')
+      .select('id, full_name, is_admin')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => setProfile(data ?? null))
+  }, [user])
+
+  const value = { user, loading, profile, isAdmin: !!profile?.is_admin }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
