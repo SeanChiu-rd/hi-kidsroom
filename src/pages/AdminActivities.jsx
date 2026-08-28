@@ -179,6 +179,7 @@ export default function AdminActivities() {
       <div className="page-head">
         <h1>活動管理</h1>
         <div className="slot-actions">
+          <Link to="/admin/teachers" className="button-link">老師管理</Link>
           <Link to="/" className="button-link">首頁</Link>
           <button className="secondary" onClick={() => supabase.auth.signOut()}>登出</button>
         </div>
