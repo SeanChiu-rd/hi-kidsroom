@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { activityImageOf } from '../lib/constants'
 
 export default function Home() {
   const [activities, setActivities] = useState([])
@@ -38,13 +39,9 @@ export default function Home() {
             {activities.map((a) => (
               <Link key={a.id} to={`/activity/${a.id}`} className="activity-card">
                 <div
-                  className="activity-card-img"
-                  style={
-                    a.image_url ? { backgroundImage: `url(${a.image_url})` } : undefined
-                  }
-                >
-                  {!a.image_url && <span className="activity-card-emoji">🎨</span>}
-                </div>
+                  className={`activity-card-img ${a.image_url ? '' : 'is-logo'}`}
+                  style={{ backgroundImage: `url(${activityImageOf(a.image_url)})` }}
+                />
                 <div className="activity-card-body">
                   <div className="activity-card-name">{a.name}</div>
                   {a.description && <p className="activity-card-desc">{a.description}</p>}

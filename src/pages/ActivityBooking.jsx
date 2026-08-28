@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { activityImageOf } from '../lib/constants'
 
 export default function ActivityBooking() {
   const { activityId } = useParams()
@@ -153,9 +154,11 @@ export default function ActivityBooking() {
       </Link>
 
       <div className="activity-hero">
-        {activity.image_url && (
-          <img className="activity-hero-img" src={activity.image_url} alt={activity.name} />
-        )}
+        <img
+          className={`activity-hero-img ${activity.image_url ? '' : 'is-logo'}`}
+          src={activityImageOf(activity.image_url)}
+          alt={activity.name}
+        />
         <div>
           <h1>{activity.name}</h1>
           {activity.description && <p className="muted">{activity.description}</p>}

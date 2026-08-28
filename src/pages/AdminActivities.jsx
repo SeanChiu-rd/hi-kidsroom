@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { DEFAULT_ACTIVITY_IMAGE } from '../lib/constants'
 
 const EMPTY = {
   name: '',
@@ -22,6 +23,17 @@ export default function AdminActivities() {
   // 修改中的活動
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState(EMPTY)
+
+  // 圖片上傳中的狀態（new = 新增表單、edit = 修改表單）
+  const [uploading, setUploading] = useState('')
+
+  // 浮動提示（取代瀏覽器 alert）
+  const [toast, setToast] = useState(null) // { text, type }
+  function showToast(text, type = 'info') {
+    setToast({ text, type })
+    window.clearTimeout(showToast._t)
+    showToast._t = window.setTimeout(() => setToast(null), 2800)
+  }
 
   async function load() {
     setLoading(true)
@@ -47,6 +59,48 @@ export default function AdminActivities() {
   }
   const setNew = upd(setForm)
   const setEdit = upd(setEditForm)
+
+  // 上傳圖片到 Supabase Storage，成功後把公開網址寫回表單的 image_url
+  // which = 'new'（新增表單）或 'edit'（修改表單）
+  async function uploadImage(which, file) {
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      showToast('請選擇圖片檔', 'error')
+      return
+    }
+    // 檔案大小上限 5MB，避免手機拍的大圖太肥
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('圖片太大了，請選 5MB 以下的圖片', 'error')
+      return
+    }
+
+    setUploading(which)
+
+    const ext = file.name.split('.').pop() || 'jpg'
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+
+    const { error: upErr } = await supabase.storage
+      .from('activity-images')
+      .upload(path, file, { cacheControl: '3600', upsert: false })
+
+    if (upErr) {
+      const hint =
+        upErr.message === 'Bucket not found'
+          ? '找不到圖片儲存空間，請先在 Supabase 建立名為 activity-images 的 bucket。'
+          : upErr.message
+      showToast('圖片上傳失敗：' + hint, 'error')
+      setUploading('')
+      return
+    }
+
+    const { data } = supabase.storage.from('activity-images').getPublicUrl(path)
+    const publicUrl = data.publicUrl
+
+    const setter = which === 'edit' ? setEditForm : setForm
+    setter((prev) => ({ ...prev, image_url: publicUrl }))
+    setUploading('')
+    showToast('圖片上傳成功！記得按「儲存」才會套用。', 'success')
+  }
 
   async function addActivity(e) {
     e.preventDefault()
@@ -117,6 +171,11 @@ export default function AdminActivities() {
 
   return (
     <div className="page">
+      {toast && (
+        <div className={`toast toast-${toast.type}`} role="status">
+          {toast.text}
+        </div>
+      )}
       <div className="page-head">
         <h1>活動管理</h1>
         <div className="slot-actions">
@@ -152,14 +211,38 @@ export default function AdminActivities() {
           活動簡介
           <textarea rows={2} value={form.description} onChange={setNew('description')} />
         </label>
-        <label>
-          圖片網址
-          <input
-            value={form.image_url}
-            onChange={setNew('image_url')}
-            placeholder="https://…（可留空）"
-          />
-        </label>
+        <div className="image-field">
+          <span className="image-field-label">活動圖片</span>
+          <div className="image-uploader">
+            <img
+              className={`image-preview ${form.image_url ? '' : 'is-logo'}`}
+              src={form.image_url || DEFAULT_ACTIVITY_IMAGE}
+              alt="活動圖片預覽"
+            />
+            <div className="image-uploader-actions">
+              <label className="button-link file-button">
+                {uploading === 'new' ? '上傳中…' : '選擇圖片上傳'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  disabled={uploading === 'new'}
+                  onChange={(e) => uploadImage('new', e.target.files?.[0])}
+                />
+              </label>
+              {form.image_url && (
+                <button
+                  type="button"
+                  className="secondary sm"
+                  onClick={() => setForm((p) => ({ ...p, image_url: '' }))}
+                >
+                  移除圖片
+                </button>
+              )}
+              <span className="muted image-hint">可從手機或電腦上傳，留空會用預設 Logo。</span>
+            </div>
+          </div>
+        </div>
         <label className="checkbox-row">
           <input type="checkbox" checked={form.is_active} onChange={setNew('is_active')} />
           上架（客人看得到）
@@ -201,10 +284,37 @@ export default function AdminActivities() {
                     活動簡介
                     <textarea rows={2} value={editForm.description} onChange={setEdit('description')} />
                   </label>
-                  <label style={{ flex: '1 1 100%' }}>
-                    圖片網址
-                    <input value={editForm.image_url} onChange={setEdit('image_url')} />
-                  </label>
+                  <div className="image-field" style={{ flex: '1 1 100%' }}>
+                    <span className="image-field-label">活動圖片</span>
+                    <div className="image-uploader">
+                      <img
+                        className={`image-preview ${editForm.image_url ? '' : 'is-logo'}`}
+                        src={editForm.image_url || DEFAULT_ACTIVITY_IMAGE}
+                        alt="活動圖片預覽"
+                      />
+                      <div className="image-uploader-actions">
+                        <label className="button-link file-button">
+                          {uploading === 'edit' ? '上傳中…' : '選擇圖片上傳'}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            hidden
+                            disabled={uploading === 'edit'}
+                            onChange={(e) => uploadImage('edit', e.target.files?.[0])}
+                          />
+                        </label>
+                        {editForm.image_url && (
+                          <button
+                            type="button"
+                            className="secondary sm"
+                            onClick={() => setEditForm((p) => ({ ...p, image_url: '' }))}
+                          >
+                            移除圖片
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   <label className="checkbox-row">
                     <input type="checkbox" checked={editForm.is_active} onChange={setEdit('is_active')} />
                     上架
@@ -218,7 +328,11 @@ export default function AdminActivities() {
             ) : (
               <li key={a.id} className="slot-item">
                 <div className="activity-row">
-                  {a.image_url && <img className="activity-thumb" src={a.image_url} alt={a.name} />}
+                  <img
+                    className={`activity-thumb ${a.image_url ? '' : 'is-logo'}`}
+                    src={a.image_url || DEFAULT_ACTIVITY_IMAGE}
+                    alt={a.name}
+                  />
                   <div>
                     <strong>{a.name}</strong>
                     {!a.is_active && <span className="badge"> 未上架</span>}

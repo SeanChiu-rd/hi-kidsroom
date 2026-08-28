@@ -65,8 +65,11 @@ h2 {
   align-items: center;
   gap: 0.4rem;
 }
-.topbar .brand::before {
-  content: "🎨";
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 .topbar nav a {
   margin-left: 1rem;
@@ -184,11 +187,16 @@ h2 {
 }
 .activity-card-img {
   height: 160px;
-  background: linear-gradient(135deg, var(--brand), var(--accent));
+  background-color: #f3f2fb;
   background-size: cover;
+  background-repeat: no-repeat;
   background-position: center;
   display: grid;
   place-items: center;
+}
+/* 預設 Logo：完整顯示、不裁切 */
+.activity-card-img.is-logo {
+  background-size: contain;
 }
 .activity-card-emoji {
   font-size: 2.5rem;
@@ -243,8 +251,12 @@ h2 {
   width: 200px;
   height: 140px;
   object-fit: cover;
+  background-color: #f3f2fb;
   border-radius: var(--radius);
   flex-shrink: 0;
+}
+.activity-hero-img.is-logo {
+  object-fit: contain;
 }
 .activity-hero-price {
   font-weight: 700;
@@ -555,8 +567,89 @@ button.sm {
   width: 72px;
   height: 56px;
   object-fit: cover;
+  background-color: #f3f2fb;
   border-radius: 10px;
   flex-shrink: 0;
+}
+.activity-thumb.is-logo {
+  object-fit: contain;
+}
+
+/* ---------- 活動圖片上傳 ---------- */
+.image-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.image-field-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.image-uploader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.image-preview {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #e3e3ee;
+  background: #f7f7fb;
+  flex-shrink: 0;
+}
+.image-preview.is-logo {
+  object-fit: contain;
+}
+.image-uploader-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.file-button {
+  cursor: pointer;
+}
+.image-hint {
+  font-size: 0.85rem;
+}
+
+/* ---------- 浮動提示 Toast ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 1000;
+  max-width: 90vw;
+  padding: 0.85rem 1.3rem;
+  border-radius: 12px;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  animation: toast-in 0.25s ease;
+}
+.toast-success {
+  background: #16a34a;
+}
+.toast-error {
+  background: #dc2626;
+}
+.toast-info {
+  background: #334155;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 
 /* ---------- 客人端返回連結 ---------- */

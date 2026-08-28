@@ -28,7 +28,10 @@ function App() {
   return (
     <>
       <header className="topbar">
-        <Link to="/" className="brand">hi-kidsroom</Link>
+        <Link to="/" className="brand">
+          <img className="brand-logo" src="/logo.png" alt="Hi Kids Room" />
+          hi-kidsroom
+        </Link>
         <nav>
           {isAdmin && <Link to="/admin">活動管理</Link>}
           <Link to="/teacher">老師專區</Link>
