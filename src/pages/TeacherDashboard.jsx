@@ -324,11 +324,13 @@ export default function TeacherDashboard() {
 
             return (
               <li key={slot.id} className="slot-item">
-                <span>
+                <div className="slot-info">
                   {actName && <strong className="slot-activity">{actName}</strong>}
-                  {formatDT(slot.start_time)} － {formatDT(slot.end_time)}
-                  <span className="muted"> · 已預約 {slot.booked_count}/{slot.capacity} 位小孩</span>
-                </span>
+                  <span className="slot-time">
+                    {formatDT(slot.start_time)} － {formatDT(slot.end_time)}
+                  </span>
+                  <span className="muted">已預約 {slot.booked_count}/{slot.capacity} 位小孩</span>
+                </div>
                 <span className="slot-actions">
                   {full && <span className="badge booked">已約滿</span>}
                   <button className="secondary sm" onClick={() => startEdit(slot)}>

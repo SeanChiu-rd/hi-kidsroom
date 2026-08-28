@@ -482,10 +482,17 @@ button.sm {
   border-left: 4px solid var(--brand);
   color: var(--ink);
 }
+.slot-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.slot-info .slot-time {
+  font-weight: 600;
+}
 .slot-activity {
-  display: inline-block;
-  margin-right: 0.5rem;
   color: var(--brand);
+  font-size: 1.05rem;
 }
 .day-group {
   margin-bottom: 1.5rem;
