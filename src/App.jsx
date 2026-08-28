@@ -24,7 +24,7 @@ function RequireAdmin({ children }) {
 }
 
 function App() {
-  const { isAdmin } = useAuth()
+  const { user, loading, isAdmin } = useAuth()
   return (
     <>
       <header className="topbar">
@@ -33,8 +33,9 @@ function App() {
           hi-kidsroom
         </Link>
         <nav>
-          {isAdmin && <Link to="/admin">活動管理</Link>}
-          <Link to="/teacher">老師專區</Link>
+          {!loading && !user && <Link to="/teacher/login">登入</Link>}
+          {!loading && user && isAdmin && <Link to="/admin">活動管理</Link>}
+          {!loading && user && <Link to="/teacher">老師專區</Link>}
         </nav>
       </header>
 
