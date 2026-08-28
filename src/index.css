@@ -160,6 +160,109 @@ h2 {
   color: var(--brand);
 }
 
+/* ---------- 活動卡片（客人首頁） ---------- */
+.activity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+.activity-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  color: var(--ink);
+}
+.activity-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+  text-decoration: none;
+}
+.activity-card-img {
+  height: 160px;
+  background: linear-gradient(135deg, var(--brand), var(--accent));
+  background-size: cover;
+  background-position: center;
+  display: grid;
+  place-items: center;
+}
+.activity-card-emoji {
+  font-size: 2.5rem;
+}
+.activity-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.1rem 1.25rem 1.25rem;
+  flex: 1;
+}
+.activity-card-name {
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+.activity-card-desc {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0;
+  flex: 1;
+}
+.activity-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.4rem;
+}
+.activity-card-price {
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: var(--brand);
+}
+.activity-card-price .unit {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.activity-card-foot .cta {
+  font-weight: 700;
+  color: var(--brand);
+}
+
+/* ---------- 活動預約頁 ---------- */
+.activity-hero {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.activity-hero-img {
+  width: 200px;
+  height: 140px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+}
+.activity-hero-price {
+  font-weight: 700;
+  color: var(--brand);
+  font-size: 1.1rem;
+}
+.amount-box {
+  background: #f3f2fb;
+  border: 1px solid #e2ddfb;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  font-size: 1rem;
+}
+.amount-box strong {
+  color: var(--brand);
+  font-size: 1.1rem;
+}
+
 /* ---------- 卡片與表單 ---------- */
 .card {
   background: var(--card);

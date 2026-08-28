@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
         .single(),
       supabase
         .from('slots')
-        .select('start_time, end_time, activity_name')
+        .select('start_time, end_time, activity_name, activities(name)')
         .eq('id', booking.slot_id)
         .single(),
     ])
@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       ? `${formatTaipei(slot.start_time)} － ${formatTaipei(slot.end_time)}`
       : '（時段資訊查詢失敗）'
 
-    const activityText = slot?.activity_name || '課程'
+    const activityText = slot?.activities?.name || slot?.activity_name || '課程'
 
     const html = `
       <div style="font-family: system-ui, sans-serif; line-height: 1.6; color: #1f2430;">
@@ -74,6 +74,7 @@ Deno.serve(async (req) => {
           <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">入店大人</td><td>${booking.adults_count ?? 0} 位</td></tr>
           <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">參加小孩</td><td>${booking.kids_count ?? 1} 位</td></tr>
           <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">小孩年齡</td><td>${booking.customer_age || '未填'}</td></tr>
+          <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">課程費用</td><td>NT$${booking.amount ?? 0}</td></tr>
           <tr><td style="padding: 4px 12px 4px 0; color: #6b7280;">備註</td><td>${booking.note || '無'}</td></tr>
         </table>
         <p style="color: #6b7280; font-size: 14px;">請儘快與客戶聯繫確認。</p>

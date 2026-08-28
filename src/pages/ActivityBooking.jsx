@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
-export default function BookingPage() {
-  const { teacherId } = useParams()
-  const [teacher, setTeacher] = useState(null)
+export default function ActivityBooking() {
+  const { activityId } = useParams()
+  const [activity, setActivity] = useState(null)
   const [slots, setSlots] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -21,16 +21,16 @@ export default function BookingPage() {
 
   async function loadData() {
     setLoading(true)
-    const [{ data: t }, { data: s }] = await Promise.all([
-      supabase.from('profiles').select('id, full_name, bio').eq('id', teacherId).single(),
+    const [{ data: a }, { data: s }] = await Promise.all([
+      supabase.from('activities').select('*').eq('id', activityId).single(),
       supabase
         .from('slots')
         .select('*')
-        .eq('teacher_id', teacherId)
+        .eq('activity_id', activityId)
         .gte('start_time', new Date().toISOString())
         .order('start_time', { ascending: true }),
     ])
-    setTeacher(t)
+    setActivity(a)
     setSlots(s ?? [])
     setLoading(false)
   }
@@ -38,21 +38,19 @@ export default function BookingPage() {
   useEffect(() => {
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teacherId])
+  }, [activityId])
 
-  // 依「活動名稱 → 日期」把時段分組
-  const activities = {}
+  // 依日期分組
+  const groups = {}
   for (const slot of slots) {
-    const act = slot.activity_name || '課程'
     const day = new Date(slot.start_time).toLocaleDateString('zh-TW', {
       month: 'long',
       day: 'numeric',
       weekday: 'long',
       timeZone: 'Asia/Taipei',
     })
-    if (!activities[act]) activities[act] = {}
-    if (!activities[act][day]) activities[act][day] = []
-    activities[act][day].push(slot)
+    if (!groups[day]) groups[day] = []
+    groups[day].push(slot)
   }
 
   function timeLabel(iso) {
@@ -63,9 +61,24 @@ export default function BookingPage() {
     })
   }
 
+  function fullDateLabel(iso) {
+    return new Date(iso).toLocaleString('zh-TW', {
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Taipei',
+    })
+  }
+
   function remainingOf(slot) {
     return slot.capacity - slot.booked_count
   }
+
+  const price = activity?.price ?? 0
+  const adultMin = activity?.adult_min_charge ?? 0
+  const amount = Number(kids) * price
 
   async function submitBooking(e) {
     e.preventDefault()
@@ -82,13 +95,14 @@ export default function BookingPage() {
 
     const { error } = await supabase.from('bookings').insert({
       slot_id: selected.id,
-      teacher_id: teacherId,
+      teacher_id: selected.teacher_id,
       customer_name: name,
       customer_phone: phone,
       adults_count: Number(adults),
       kids_count: Number(kids),
       customer_age: age,
       note: note,
+      amount: amount,
     })
 
     if (error) {
@@ -101,7 +115,12 @@ export default function BookingPage() {
   }
 
   if (loading) return <div className="page">載入中…</div>
-  if (!teacher) return <div className="page">找不到這位老師。<Link to="/">回首頁</Link></div>
+  if (!activity)
+    return (
+      <div className="page">
+        找不到這個活動。<Link to="/">回首頁</Link>
+      </div>
+    )
 
   if (done) {
     return (
@@ -109,25 +128,19 @@ export default function BookingPage() {
         <div className="card">
           <h1>預約成功 🎉</h1>
           <p>
-            已為你向 <strong>{teacher.full_name || '老師'}</strong> 送出預約：
+            已為你送出 <strong>{activity.name}</strong> 的預約：
           </p>
           <p>
-            <strong>
-              {new Date(selected.start_time).toLocaleString('zh-TW', {
-                month: 'long',
-                day: 'numeric',
-                weekday: 'long',
-                hour: '2-digit',
-                minute: '2-digit',
-                timeZone: 'Asia/Taipei',
-              })}
-            </strong>
+            <strong>{fullDateLabel(selected.start_time)}</strong>
             <br />
-            {selected.activity_name ? selected.activity_name + '／' : ''}
             大人 {adults} 位、小孩 {kids} 位
+            <br />
+            課程費用：NT${amount}
           </p>
           <p className="muted">老師會收到通知並與你聯繫。</p>
-          <Link to="/" className="back-link">← 回首頁</Link>
+          <Link to="/" className="back-link">
+            ← 回首頁
+          </Link>
         </div>
       </div>
     )
@@ -135,42 +148,51 @@ export default function BookingPage() {
 
   return (
     <div className="page">
-      <Link to="/" className="back-link">← 回老師列表</Link>
-      <h1>預約 {teacher.full_name || '老師'} 的課程</h1>
-      {teacher.bio && <p className="muted">{teacher.bio}</p>}
+      <Link to="/" className="back-link">
+        ← 回活動列表
+      </Link>
+
+      <div className="activity-hero">
+        {activity.image_url && (
+          <img className="activity-hero-img" src={activity.image_url} alt={activity.name} />
+        )}
+        <div>
+          <h1>{activity.name}</h1>
+          {activity.description && <p className="muted">{activity.description}</p>}
+          <p className="activity-hero-price">
+            小孩 NT${price} / 位
+            <span className="muted"> · 每位大人低消 NT${adultMin}</span>
+          </p>
+        </div>
+      </div>
 
       <h2>選擇時段</h2>
       {slots.length === 0 ? (
-        <p className="muted">這位老師目前沒有可預約的時段，請稍後再來。</p>
+        <p className="muted">這個活動目前沒有可預約的時段，請稍後再來。</p>
       ) : (
-        Object.entries(activities).map(([act, days]) => (
-          <div key={act} className="activity-group">
-            <h3 className="activity-title">{act}</h3>
-            {Object.entries(days).map(([day, daySlots]) => (
-              <div key={day} className="day-group">
-                <div className="day-label">{day}</div>
-                <div className="slot-chips">
-                  {daySlots.map((slot) => {
-                    const remaining = remainingOf(slot)
-                    const full = remaining <= 0
-                    return (
-                      <button
-                        key={slot.id}
-                        type="button"
-                        disabled={full}
-                        className={`slot-chip ${full ? 'booked' : ''} ${
-                          selected?.id === slot.id ? 'selected' : ''
-                        }`}
-                        onClick={() => setSelected(slot)}
-                      >
-                        {timeLabel(slot.start_time)}－{timeLabel(slot.end_time)}
-                        {full ? ' · 已約滿' : ` · 剩 ${remaining} 位`}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
+        Object.entries(groups).map(([day, daySlots]) => (
+          <div key={day} className="day-group">
+            <div className="day-label">{day}</div>
+            <div className="slot-chips">
+              {daySlots.map((slot) => {
+                const remaining = remainingOf(slot)
+                const full = remaining <= 0
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    disabled={full}
+                    className={`slot-chip ${full ? 'booked' : ''} ${
+                      selected?.id === slot.id ? 'selected' : ''
+                    }`}
+                    onClick={() => setSelected(slot)}
+                  >
+                    {timeLabel(slot.start_time)}－{timeLabel(slot.end_time)}
+                    {full ? ' · 已約滿' : ` · 剩 ${remaining} 位`}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         ))
       )}
@@ -180,17 +202,7 @@ export default function BookingPage() {
           <h2>填寫預約資料</h2>
           <form onSubmit={submitBooking} className="card form">
             <p className="muted">
-              已選時段：
-              {selected.activity_name ? selected.activity_name + '／' : ''}
-              {new Date(selected.start_time).toLocaleString('zh-TW', {
-                month: 'long',
-                day: 'numeric',
-                weekday: 'long',
-                hour: '2-digit',
-                minute: '2-digit',
-                timeZone: 'Asia/Taipei',
-              })}
-              （尚剩 {remainingOf(selected)} 位小孩名額）
+              已選時段：{fullDateLabel(selected.start_time)}（尚剩 {remainingOf(selected)} 位小孩名額）
             </p>
             <label>
               姓名
@@ -237,6 +249,15 @@ export default function BookingPage() {
                 placeholder="有任何需求可在此說明（可留空）"
               />
             </label>
+
+            <div className="amount-box">
+              <div>
+                課程費用：小孩 {kids} 位 × NT${price} =
+                <strong> NT${amount}</strong>
+              </div>
+              <div className="muted">＊每位大人低消 NT${adultMin}（現場消費）</div>
+            </div>
+
             <button type="submit" disabled={busy}>
               {busy ? '送出中…' : '確認預約'}
             </button>

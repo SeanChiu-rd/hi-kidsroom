@@ -1,7 +1,7 @@
 import { Routes, Route, Link, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import Home from './pages/Home'
-import BookingPage from './pages/BookingPage'
+import ActivityBooking from './pages/ActivityBooking'
 import TeacherLogin from './pages/TeacherLogin'
 import TeacherDashboard from './pages/TeacherDashboard'
 import AdminActivities from './pages/AdminActivities'
@@ -38,7 +38,7 @@ function App() {
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/book/:teacherId" element={<BookingPage />} />
+          <Route path="/activity/:activityId" element={<ActivityBooking />} />
           <Route path="/teacher/login" element={<TeacherLogin />} />
           <Route
             path="/teacher"

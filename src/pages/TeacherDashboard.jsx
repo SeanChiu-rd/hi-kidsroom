@@ -6,8 +6,9 @@ import { useAuth } from '../hooks/useAuth'
 export default function TeacherDashboard() {
   const { user } = useAuth()
   const [slots, setSlots] = useState([])
+  const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(true)
-  const [activityName, setActivityName] = useState('')
+  const [activityId, setActivityId] = useState('')
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
   const [capacity, setCapacity] = useState(1)
@@ -15,7 +16,7 @@ export default function TeacherDashboard() {
 
   // 修改中的時段
   const [editingId, setEditingId] = useState(null)
-  const [editActivity, setEditActivity] = useState('')
+  const [editActivityId, setEditActivityId] = useState('')
   const [editStart, setEditStart] = useState('')
   const [editEnd, setEditEnd] = useState('')
   const [editCapacity, setEditCapacity] = useState(1)
@@ -24,7 +25,7 @@ export default function TeacherDashboard() {
     setLoading(true)
     const { data, error } = await supabase
       .from('slots')
-      .select('*')
+      .select('*, activities(name)')
       .eq('teacher_id', user.id)
       .order('start_time', { ascending: true })
     if (error) setMessage('讀取時段失敗：' + error.message)
@@ -32,12 +33,26 @@ export default function TeacherDashboard() {
     setLoading(false)
   }
 
+  async function loadActivities() {
+    const { data } = await supabase
+      .from('activities')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+    setActivities(data ?? [])
+  }
+
   useEffect(() => {
     loadSlots()
+    loadActivities()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 選了開始時間後，自動把結束時間的「年月日」帶成一樣（時間部分沿用既有或開始時間）
+  function activityNameOf(id) {
+    return activities.find((a) => a.id === id)?.name || null
+  }
+
+  // 選了開始時間後，自動把結束時間的「年月日」帶成一樣
   function handleStartChange(e) {
     const value = e.target.value
     setStart(value)
@@ -49,10 +64,25 @@ export default function TeacherDashboard() {
     })
   }
 
+  function handleEditStartChange(e) {
+    const value = e.target.value
+    setEditStart(value)
+    if (!value) return
+    const [datePart] = value.split('T')
+    setEditEnd((prev) => {
+      const prevTime = prev ? prev.split('T')[1] : value.split('T')[1]
+      return `${datePart}T${prevTime}`
+    })
+  }
+
   async function addSlot(e) {
     e.preventDefault()
     setMessage('')
 
+    if (!activityId) {
+      setMessage('請選擇活動')
+      return
+    }
     if (new Date(end) <= new Date(start)) {
       setMessage('結束時間必須晚於開始時間')
       return
@@ -61,14 +91,11 @@ export default function TeacherDashboard() {
       setMessage('人數上限至少為 1')
       return
     }
-    if (!activityName.trim()) {
-      setMessage('請輸入活動名稱')
-      return
-    }
 
     const { error } = await supabase.from('slots').insert({
       teacher_id: user.id,
-      activity_name: activityName.trim(),
+      activity_id: activityId,
+      activity_name: activityNameOf(activityId), // 備援顯示用
       start_time: new Date(start).toISOString(),
       end_time: new Date(end).toISOString(),
       capacity: Number(capacity),
@@ -76,7 +103,7 @@ export default function TeacherDashboard() {
     if (error) {
       setMessage('新增失敗：' + error.message)
     } else {
-      setActivityName('')
+      setActivityId('')
       setStart('')
       setEnd('')
       setCapacity(1)
@@ -93,7 +120,7 @@ export default function TeacherDashboard() {
   function startEdit(slot) {
     setMessage('')
     setEditingId(slot.id)
-    setEditActivity(slot.activity_name || '')
+    setEditActivityId(slot.activity_id || '')
     setEditStart(toLocalInput(slot.start_time))
     setEditEnd(toLocalInput(slot.end_time))
     setEditCapacity(slot.capacity)
@@ -103,20 +130,13 @@ export default function TeacherDashboard() {
     setEditingId(null)
   }
 
-  function handleEditStartChange(e) {
-    const value = e.target.value
-    setEditStart(value)
-    if (!value) return
-    const [datePart] = value.split('T')
-    setEditEnd((prev) => {
-      const prevTime = prev ? prev.split('T')[1] : value.split('T')[1]
-      return `${datePart}T${prevTime}`
-    })
-  }
-
   async function saveEdit(slot) {
     setMessage('')
 
+    if (!editActivityId) {
+      setMessage('請選擇活動')
+      return
+    }
     if (new Date(editEnd) <= new Date(editStart)) {
       setMessage('結束時間必須晚於開始時間')
       return
@@ -126,15 +146,11 @@ export default function TeacherDashboard() {
       return
     }
 
-    if (!editActivity.trim()) {
-      setMessage('請輸入活動名稱')
-      return
-    }
-
     const { error } = await supabase
       .from('slots')
       .update({
-        activity_name: editActivity.trim(),
+        activity_id: editActivityId,
+        activity_name: activityNameOf(editActivityId),
         start_time: new Date(editStart).toISOString(),
         end_time: new Date(editEnd).toISOString(),
         capacity: Number(editCapacity),
@@ -184,16 +200,23 @@ export default function TeacherDashboard() {
       </div>
       <p className="muted">目前登入：{user.email}</p>
 
+      {activities.length === 0 && (
+        <p className="message">
+          目前還沒有可選的活動，請先請管理人到「活動管理」建立活動。
+        </p>
+      )}
+
       <form onSubmit={addSlot} className="card form row">
         <label>
-          活動名稱
-          <input
-            type="text"
-            value={activityName}
-            onChange={(e) => setActivityName(e.target.value)}
-            placeholder="例如 黏土手作課"
-            required
-          />
+          活動
+          <select value={activityId} onChange={(e) => setActivityId(e.target.value)} required>
+            <option value="">請選擇活動</option>
+            {activities.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
         </label>
         <div className="time-pair">
           <label>
@@ -239,18 +262,25 @@ export default function TeacherDashboard() {
         <ul className="slot-list">
           {slots.map((slot) => {
             const full = slot.booked_count >= slot.capacity
+            const actName = slot.activities?.name || slot.activity_name
 
             if (editingId === slot.id) {
               return (
                 <li key={slot.id} className="slot-item editing">
                   <div className="slot-edit">
                     <label>
-                      活動名稱
-                      <input
-                        type="text"
-                        value={editActivity}
-                        onChange={(e) => setEditActivity(e.target.value)}
-                      />
+                      活動
+                      <select
+                        value={editActivityId}
+                        onChange={(e) => setEditActivityId(e.target.value)}
+                      >
+                        <option value="">請選擇活動</option>
+                        {activities.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.name}
+                          </option>
+                        ))}
+                      </select>
                     </label>
                     <div className="time-pair">
                       <label>
@@ -295,9 +325,7 @@ export default function TeacherDashboard() {
             return (
               <li key={slot.id} className="slot-item">
                 <span>
-                  {slot.activity_name && (
-                    <strong className="slot-activity">{slot.activity_name}</strong>
-                  )}
+                  {actName && <strong className="slot-activity">{actName}</strong>}
                   {formatDT(slot.start_time)} － {formatDT(slot.end_time)}
                   <span className="muted"> · 已預約 {slot.booked_count}/{slot.capacity} 位小孩</span>
                 </span>
